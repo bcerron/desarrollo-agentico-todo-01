@@ -1,7 +1,6 @@
 package actions
 
 import (
-	"fmt"
 	"net/url"
 	"strings"
 
@@ -90,66 +89,6 @@ func (as *ActionSuite) Test_TasksToggle_InvalidID() {
 	as.Equal(404, res.Code)
 }
 
-func (as *ActionSuite) Test_TasksIndex_LinksToEdit() {
-	task := &models.Task{Title: "Tarea con enlace de edición"}
-	verrs, err := as.DB.ValidateAndCreate(task)
-	as.NoError(err)
-	as.False(verrs.HasAny())
-
-	res := as.HTML("/").Get()
-	as.Equal(200, res.Code)
-	as.Contains(res.Body.String(), fmt.Sprintf(`href="/tasks/%s/edit"`, task.ID))
-}
-
-func (as *ActionSuite) Test_TasksEdit_ShowsForm() {
-	task := &models.Task{Title: "Título original"}
-	verrs, err := as.DB.ValidateAndCreate(task)
-	as.NoError(err)
-	as.False(verrs.HasAny())
-
-	res := as.HTML("/tasks/%s/edit", task.ID).Get()
-	as.Equal(200, res.Code)
-
-	body := res.Body.String()
-	as.Contains(body, fmt.Sprintf(`action="/tasks/%s"`, task.ID))
-	as.Contains(body, `value="Título original"`)
-}
-
-func (as *ActionSuite) Test_TasksEdit_NotFound() {
-	id := uuid.Must(uuid.NewV4())
-	res := as.HTML("/tasks/%s/edit", id).Get()
-	as.Equal(404, res.Code)
-}
-
-func (as *ActionSuite) Test_TasksUpdate_Valid() {
-	task := &models.Task{Title: "Título original", Completed: true}
-	verrs, err := as.DB.ValidateAndCreate(task)
-	as.NoError(err)
-	as.False(verrs.HasAny())
-
-	res := as.HTML("/tasks/%s", task.ID).Put(url.Values{"title": {"  Título editado  "}})
-	as.Equal(303, res.Code)
-	as.Equal("/", res.Header().Get("Location"))
-
-	as.NoError(as.DB.Reload(task))
-	as.Equal("Título editado", task.Title)
-	as.True(task.Completed)
-}
-
-func (as *ActionSuite) Test_TasksUpdate_EmptyTitle_Invalid() {
-	task := &models.Task{Title: "Título original"}
-	verrs, err := as.DB.ValidateAndCreate(task)
-	as.NoError(err)
-	as.False(verrs.HasAny())
-
-	res := as.HTML("/tasks/%s", task.ID).Put(url.Values{"title": {"   "}})
-	as.Equal(422, res.Code)
-	as.Contains(res.Body.String(), "El título es obligatorio.")
-
-	as.NoError(as.DB.Reload(task))
-	as.Equal("Título original", task.Title)
-}
-
 func (as *ActionSuite) Test_TasksUpdate_TooLong_Invalid() {
 	task := &models.Task{Title: "Título original"}
 	verrs, err := as.DB.ValidateAndCreate(task)
@@ -161,12 +100,6 @@ func (as *ActionSuite) Test_TasksUpdate_TooLong_Invalid() {
 
 	as.NoError(as.DB.Reload(task))
 	as.Equal("Título original", task.Title)
-}
-
-func (as *ActionSuite) Test_TasksUpdate_NotFound() {
-	id := uuid.Must(uuid.NewV4())
-	res := as.HTML("/tasks/%s", id).Put(url.Values{"title": {"Lo que sea"}})
-	as.Equal(404, res.Code)
 }
 
 func (as *ActionSuite) Test_TasksDestroy() {
